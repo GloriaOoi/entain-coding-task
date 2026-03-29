@@ -11,6 +11,10 @@ struct NextToGoView: View {
     private let races = RaceRow.sampleData
     @State private var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
 
+    private var filteredRaces: [RaceRow] {
+        races.filter { selectedCategories.contains($0.category) }
+    }
+
     var body: some View {
         ZStack {
             Color(.systemBackground)
@@ -20,10 +24,10 @@ struct NextToGoView: View {
                 categoryFilters
 
                 LazyVStack(spacing: 0) {
-                    ForEach(races, id: \.id) { race in
+                    ForEach(filteredRaces) { race in
                         RaceListRow(race: race)
 
-                        if race.id != races.last?.id {
+                        if race.id != filteredRaces.last?.id {
                             Divider()
                                 .overlay(Color.Entain.divider)
                         }
@@ -31,7 +35,7 @@ struct NextToGoView: View {
                 }
                 .background(Color(.systemBackground))
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .padding(.vertical, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -44,7 +48,7 @@ struct NextToGoView: View {
                     toggle(category)
                 } label: {
                     Image(systemName: category.symbolName)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(.title3.weight(.semibold))
                         .foregroundStyle(selectedCategories.contains(category) ? Color.Entain.filterIconActive : Color.Entain.filterIconInactive)
                         .frame(width: 56, height: 56)
                         .background(
@@ -72,37 +76,35 @@ private struct RaceListRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: race.category.symbolName)
-                .font(.system(size: 29, weight: .semibold))
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(Color.Entain.rowIcon)
                 .frame(width: 44, alignment: .leading)
 
             Text(race.meetingName)
-                .font(.system(size: 22, weight: .medium))
+                .font(.title3)
                 .foregroundStyle(Color.Entain.primaryText)
                 .lineLimit(1)
 
             Spacer(minLength: 16)
 
             Text(race.raceNumber)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(Color.Entain.primaryText)
 
             Text(race.countdown)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(race.isExpired ? Color.Entain.countdownExpiredText : Color.Entain.countdownActiveText)
-                .padding(.horizontal, 15)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(
                     Capsule(style: .continuous)
                         .fill(Color.Entain.countdownBackground)
                 )
                 .frame(minWidth: 108, alignment: .trailing)
         }
-        .padding(.vertical, 22)
+        .padding(.vertical, 24)
     }
 }
-
-
 
 #Preview {
     NextToGoView()
