@@ -10,8 +10,8 @@ import Testing
 @testable import EntainCodingTask
 
 struct EntainCodingTaskTests {
-    @Test func nextRacesServiceDecodesAndMapsRequiredFields() throws {
-        let service = NextRacesService()
+    @Test func NextRacesClientDecodesAndMapsRequiredFields() throws {
+        let service = NextRacesClient()
         let races = try service.decodeRaces(from: sampleResponseJSON)
 
         #expect(races.count == 2)
@@ -24,10 +24,10 @@ struct EntainCodingTaskTests {
         #expect(races[1].category == RaceCategory.horse)
     }
 
-    @Test func nextRacesServiceThrowsDecodingFailedForInvalidPayload() {
-        let service = NextRacesService()
+    @Test func NextRacesClientThrowsDecodingFailedForInvalidPayload() {
+        let service = NextRacesClient()
 
-        #expect(throws: NextRacesServiceError.decodingFailed) {
+        #expect(throws: NextRacesClientError.decodingFailed) {
             try service.decodeRaces(from: Data("{}".utf8))
         }
     }
