@@ -9,7 +9,139 @@ import Foundation
 import Testing
 @testable import EntainCodingTask
 
+struct MockNextRacesClient: NextRacesClientProtocol {
+    let races: [Race]
+
+    func fetchNextRaces() async throws -> [Race] {
+        races
+    }
+}
+
 struct EntainCodingTaskTests {
+    @Test func nextToGoViewModelRefreshUsesInjectedTime() async {
+        final class ClockBox {
+            var now: Date
+
+            init(now: Date) {
+                self.now = now
+            }
+        }
+
+        let clock = ClockBox(now: Date(timeIntervalSince1970: 1_000))
+        let viewModel = await NextToGoViewModel(
+            client: MockNextRacesClient(
+                races: [
+                    Race(
+                        id: "race",
+                        meetingName: "The Meadows",
+                        raceNumber: 7,
+                        advertisedStart: Date(timeIntervalSince1970: 1_000),
+                        category: .greyhound
+                    )
+                ]
+            ),
+            nowProvider: { clock.now }
+        )
+
+        await viewModel.load()
+
+        await #expect(viewModel.rows.first?.countdown == "0s")
+
+        clock.now = Date(timeIntervalSince1970: 1_033)
+        await viewModel.refresh()
+
+        await #expect(viewModel.rows.first?.countdown == "-33s")
+    }
+
+//    @Test func nextToGoLogicSortsRowsInAscendingAdvertisedStartOrder() {
+//        let now = Date(timeIntervalSince1970: 1_000)
+//        let races = [
+//            Race(id: "late", meetingName: "Late", raceNumber: 3, advertisedStart: Date(timeIntervalSince1970: 1_120), category: .horse),
+//            Race(id: "early", meetingName: "Early", raceNumber: 1, advertisedStart: Date(timeIntervalSince1970: 1_030), category: .greyhound),
+//            Race(id: "middle", meetingName: "Middle", raceNumber: 2, advertisedStart: Date(timeIntervalSince1970: 1_090), category: .harness)
+//        ]
+//
+//        let rows = logic.makeRows(
+//            from: races,
+//            selectedCategories: [.horse, .greyhound, .harness],
+//            now: now
+//        )
+//
+//        #expect(rows.map(\.id) == ["early", "middle", "late"])
+//    }
+
+//    @Test func nextToGoLogicKeepsRaceVisibleAtFiftyNineSecondsPastStart() {
+//        let logic = NextToGoLogic()
+//        let race = Race(
+//            id: "race",
+//            meetingName: "Melton",
+//            raceNumber: 4,
+//            advertisedStart: Date(timeIntervalSince1970: 1_000),
+//            category: .harness
+//        )
+//
+//        let rows = logic.makeRows(
+//            from: [race],
+//            selectedCategories: [.harness],
+//            now: Date(timeIntervalSince1970: 1_059)
+//        )
+//
+//        #expect(rows.count == 1)
+//        #expect(rows[0].countdown == "-59s")
+//    }
+//
+//    @Test func nextToGoLogicRemovesRaceAtSixtySecondsPastStart() {
+//        let logic = NextToGoLogic()
+//        let race = Race(
+//            id: "race",
+//            meetingName: "Melton",
+//            raceNumber: 4,
+//            advertisedStart: Date(timeIntervalSince1970: 1_000),
+//            category: .harness
+//        )
+//
+//        let rows = logic.makeRows(
+//            from: [race],
+//            selectedCategories: [.harness],
+//            now: Date(timeIntervalSince1970: 1_060)
+//        )
+//
+//        #expect(rows.isEmpty)
+//    }
+//
+//    @Test func nextToGoLogicFormatsUpcomingCountdown() {
+//        let logic = NextToGoLogic()
+//        let race = Race(
+//            id: "race",
+//            meetingName: "Randwick",
+//            raceNumber: 2,
+//            advertisedStart: Date(timeIntervalSince1970: 1_305),
+//            category: .horse
+//        )
+//
+//        let row = logic.makeRow(from: race, now: Date(timeIntervalSince1970: 1_000))
+//
+//        #expect(row.raceNumber == "R2")
+//        #expect(row.countdown == "5m 05s")
+//        #expect(row.isExpired == false)
+//    }
+//
+//    @Test func nextToGoLogicFormatsStartedCountdown() {
+//        let logic = NextToGoLogic()
+//        let race = Race(
+//            id: "race",
+//            meetingName: "The Meadows",
+//            raceNumber: 7,
+//            advertisedStart: Date(timeIntervalSince1970: 1_000),
+//            category: .greyhound
+//        )
+//
+//        let row = logic.makeRow(from: race, now: Date(timeIntervalSince1970: 1_033))
+//
+//        #expect(row.countdown == "-33s")
+//        #expect(row.isExpired)
+//    }
+
     @Test func NextRacesClientDecodesAndMapsRequiredFields() throws {
         let service = NextRacesClient()
         let races = try service.decodeRaces(from: sampleResponseJSON)

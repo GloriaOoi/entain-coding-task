@@ -7,12 +7,16 @@
 
 import Foundation
 
+protocol NextRacesClientProtocol {
+    func fetchNextRaces() async throws -> [Race]
+}
+
 enum NextRacesClientError: Error, Equatable {
     case requestFailed
     case decodingFailed
 }
 
-struct NextRacesClient {
+struct NextRacesClient: NextRacesClientProtocol {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let mapper: NextRacesResponseMapper

@@ -30,11 +30,11 @@ struct NextRacesResponseMapper {
 
     private func mapCategory(from categoryID: String) -> RaceCategory? {
         switch categoryID {
-        case "4a2788f8-e825-4d36-9894-efd4baf1cfae":
+        case Constants.categoryId.horse:
             return .horse
-        case "9daef0d7-bf3c-4f50-921d-8e818c60fe61":
+        case Constants.categoryId.greyhound:
             return .greyhound
-        case "161d9be2-e909-4326-8c2c-35ed71fb460b":
+        case Constants.categoryId.harness:
             return .harness
         default:
             return nil
