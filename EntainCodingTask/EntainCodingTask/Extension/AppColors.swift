@@ -16,9 +16,8 @@ extension Color {
         static let filterBackgroundInactive = Color(hex: "F5F7FA")
         static let filterIconActive = Color(hex: "F75A21")
         static let filterIconInactive = Color(hex: "A3ADBA")
-        static let countdownActiveBackground = Color(hex: "FDE0E3")
+        static let countdownBackground = Color(hex: "E8E6E3")
         static let countdownActiveText = Color(hex: "F53030")
-        static let countdownExpiredBackground = Color(hex: "FFE3E6")
         static let countdownExpiredText = Color(hex: "F53030")
     }
 }

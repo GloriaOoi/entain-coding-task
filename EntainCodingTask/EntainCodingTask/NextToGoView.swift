@@ -94,7 +94,7 @@ private struct RaceListRow: View {
                 .padding(.vertical, 10)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(race.isExpired ? Color.Entain.countdownExpiredBackground : Color.Entain.countdownActiveBackground)
+                        .fill(Color.Entain.countdownBackground)
                 )
                 .frame(minWidth: 108, alignment: .trailing)
         }
