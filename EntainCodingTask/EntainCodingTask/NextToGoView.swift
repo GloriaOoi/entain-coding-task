@@ -16,29 +16,25 @@ struct NextToGoView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 24) {
-                categoryFilters
-
-                LazyVStack(spacing: 0) {
-                    ForEach(filteredRaces) { race in
-                        RaceListRow(race: race)
-
-                        if race.id != filteredRaces.last?.id {
-                            Divider()
-                                .overlay(Color.Entain.divider)
-                        }
+        VStack(alignment: .leading, spacing: 24) {
+            categoryFilters
+            
+            // G: Think about list
+            LazyVStack(spacing: 0) {
+                ForEach(filteredRaces) { race in
+                    RaceListRow(race: race)
+                    
+                    if race.id != filteredRaces.last?.id {
+                        Divider()
+                            .overlay(Color.Entain.divider)
                     }
                 }
-                .background(Color(.systemBackground))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        
     }
 
     private var categoryFilters: some View {
@@ -48,7 +44,7 @@ struct NextToGoView: View {
                     toggle(category)
                 } label: {
                     Image(systemName: category.symbolName)
-                        .font(.title3.weight(.semibold))
+                        .font(.title3)
                         .foregroundStyle(selectedCategories.contains(category) ? Color.Entain.filterIconActive : Color.Entain.filterIconInactive)
                         .frame(width: 56, height: 56)
                         .background(
@@ -76,7 +72,7 @@ private struct RaceListRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: race.category.symbolName)
-                .font(.title2.weight(.semibold))
+                .font(.title2)
                 .foregroundStyle(Color.Entain.rowIcon)
                 .frame(width: 44, alignment: .leading)
 
@@ -92,7 +88,7 @@ private struct RaceListRow: View {
                 .foregroundStyle(Color.Entain.primaryText)
 
             Text(race.countdown)
-                .font(.body.weight(.semibold))
+                .font(.body)
                 .foregroundStyle(race.isExpired ? Color.Entain.countdownExpiredText : Color.Entain.countdownActiveText)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
