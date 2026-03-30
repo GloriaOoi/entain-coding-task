@@ -7,7 +7,11 @@
 
 import Foundation
 
-struct NextRacesResponseMapper {
+protocol NextRacesResponseMapperProtocol {
+    func map(_ response: NextRacesResponse) -> [Race]
+}
+
+struct NextRacesResponseMapper: NextRacesResponseMapperProtocol {
     func map(_ response: NextRacesResponse) -> [Race] {
         response.data.nextToGoIDs.compactMap { raceID in
             guard let summary = response.data.raceSummaries[raceID] else {
