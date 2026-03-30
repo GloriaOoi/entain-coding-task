@@ -19,17 +19,25 @@ struct SystemClock: Clock {
     }
 }
 
+@MainActor
 final class NextToGoViewModel: ObservableObject {
+    @Published private(set) var isInitialLoading = false
     @Published var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
     @Published private(set) var rows: [RaceRow] = []
     
     private let client: any NextRacesClientProtocol
     private let nowProvider: () -> Date
     private let clock: Clock
-    private var races: [Race] = []
+    private var racePool: [Race] = []
     private var refreshTask: Task<Void, Never>?
+    private var fetchTask: Task<Void, Never>?
+    private var currentRequestedCount = 0
     
     private let expiryThreshold: TimeInterval = 60
+    private let visibleRowLimit = 5
+    private let desiredRaceCountPerCategory = 6
+    private let fetchStep = 30
+    private let maxFetchCount = 120
     
     init(
         client: any NextRacesClientProtocol = NextRacesClient(),
@@ -42,22 +50,34 @@ final class NextToGoViewModel: ObservableObject {
     }
     
     func loadRaces() async {
+        isInitialLoading = true
+
         do {
-            races = try await client.fetchNextRaces()
+            currentRequestedCount = fetchStep
+            let races = try await client.fetchNextRaces(count: currentRequestedCount)
+            merge(races)
             updateRows()
-            if !races.isEmpty {
+            isInitialLoading = false
+
+            if !racePool.isEmpty {
                 startRefreshLoop()
             }
+
+            await fetchUntilSufficient()
         } catch {
+            isInitialLoading = false
             rows = []
         }
     }
     
     func updateRows() {
-        rows = makeRows(
-            from: races,
-            selectedCategories: selectedCategories,
-            now: nowProvider()
+        rows = Array(
+            makeRows(
+                from: racePool,
+                selectedCategories: selectedCategories,
+                now: nowProvider()
+            )
+            .prefix(visibleRowLimit)
         )
     }
     
@@ -67,7 +87,7 @@ final class NextToGoViewModel: ObservableObject {
         now: Date
     ) -> [RaceRow] {
         races
-            .filter { selectedCategories.contains($0.category) }
+            .filter { effectiveSelectedCategories(for: selectedCategories).contains($0.category) }
             .filter { isVisible($0, now: now) }
             .sorted { $0.advertisedStart < $1.advertisedStart }
             .map { makeRow(from: $0, now: now) }
@@ -103,9 +123,7 @@ final class NextToGoViewModel: ObservableObject {
                     break
                 }
                 
-                await MainActor.run {
-                    self.updateRows()
-                }
+                self.updateRows()
             }
         }
     }
@@ -118,14 +136,76 @@ final class NextToGoViewModel: ObservableObject {
         }
         
         updateRows()
+
+        guard fetchTask == nil else {
+            return
+        }
+
+        fetchTask = Task.detached { [weak self] in
+            guard let self else {
+                return
+            }
+
+            await self.fetchUntilSufficient()
+        }
     }
     
     func onDisappear() {
         refreshTask?.cancel()
         refreshTask = nil
+        fetchTask?.cancel()
+        fetchTask = nil
     }
     
     deinit {
         refreshTask?.cancel()
+        fetchTask?.cancel()
+    }
+
+    private func fetchUntilSufficient() async {
+        defer {
+            fetchTask = nil
+        }
+
+        while !hasSufficientRacesForCurrentFilter() && currentRequestedCount < maxFetchCount {
+            currentRequestedCount = min(currentRequestedCount + fetchStep, maxFetchCount)
+
+            do {
+                let races = try await client.fetchNextRaces(count: currentRequestedCount)
+                merge(races)
+                updateRows()
+            } catch {
+                break
+            }
+        }
+    }
+
+    private func merge(_ races: [Race]) {
+        var racesByID = Dictionary(uniqueKeysWithValues: racePool.map { ($0.id, $0) })
+        for race in races {
+            racesByID[race.id] = race
+        }
+
+        racePool = Array(racesByID.values)
+    }
+
+    private func hasSufficientRacesForCurrentFilter() -> Bool {
+        let categories = effectiveSelectedCategories(for: selectedCategories)
+        let now = nowProvider()
+        let visibleRaces = racePool.filter { race in
+            categories.contains(race.category) && isVisible(race, now: now)
+        }
+
+        return categories.allSatisfy { category in
+            visibleRaces.filter { $0.category == category }.count >= desiredRaceCountPerCategory
+        }
+    }
+
+    private func effectiveSelectedCategories(for selectedCategories: Set<RaceCategory>) -> Set<RaceCategory> {
+        if selectedCategories.isEmpty {
+            return Set(RaceCategory.allCases)
+        }
+
+        return selectedCategories
     }
 }

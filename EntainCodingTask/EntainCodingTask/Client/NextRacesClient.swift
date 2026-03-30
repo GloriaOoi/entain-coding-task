@@ -8,7 +8,7 @@
 import Foundation
 
 protocol NextRacesClientProtocol {
-    func fetchNextRaces() async throws -> [Race]
+    func fetchNextRaces(count: Int) async throws -> [Race]
 }
 
 enum NextRacesClientError: Error, Equatable {
@@ -20,25 +20,25 @@ struct NextRacesClient: NextRacesClientProtocol {
     private let session: URLSession
     private let decoder: JSONDecoder
     private let mapper: NextRacesResponseMapper
-    private let endpoint: NextRacesEndpoint
+    private let endpointFactory: NextRacesEndpointProtocol
 
     init(
         session: URLSession = .shared,
         decoder: JSONDecoder = JSONDecoder(),
         mapper: NextRacesResponseMapper = NextRacesResponseMapper(),
-        endpoint: NextRacesEndpoint = NextRacesEndpoint(count: 10)
+        endpointFactory: any NextRacesEndpointProtocol = NextRacesEndpoint()
     ) {
         self.session = session
         self.decoder = decoder
         self.mapper = mapper
-        self.endpoint = endpoint
+        self.endpointFactory = endpointFactory
     }
 
-    func fetchNextRaces() async throws -> [Race] {
+    func fetchNextRaces(count: Int) async throws -> [Race] {
         let request: URLRequest
 
         do {
-            request = try URLRequest(url: endpoint.url())
+            request = try URLRequest(url: endpointFactory.url(count: count))
         } catch {
             throw NextRacesClientError.requestFailed
         }

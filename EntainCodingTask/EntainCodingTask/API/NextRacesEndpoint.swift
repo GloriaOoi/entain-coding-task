@@ -12,10 +12,12 @@ enum EndpointError: Error, Equatable {
     case invalidURL
 }
 
-struct NextRacesEndpoint {
-    let count: Int
+protocol NextRacesEndpointProtocol {
+    func url(count: Int) throws -> URL
+}
 
-    func url() throws -> URL {
+struct NextRacesEndpoint: NextRacesEndpointProtocol {
+    func url(count: Int) throws -> URL {
         guard var components = URLComponents(string: Constants.API.nextRacesBaseURL) else {
             throw EndpointError.invalidBaseURL
         }

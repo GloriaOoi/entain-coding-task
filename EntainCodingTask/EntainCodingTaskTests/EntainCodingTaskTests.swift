@@ -9,11 +9,17 @@ import Foundation
 import Testing
 @testable import EntainCodingTask
 
-struct MockNextRacesClient: NextRacesClientProtocol {
-    let races: [Race]
+final class MockNextRacesClient: NextRacesClientProtocol {
+    var responsesByCount: [Int: [Race]]
+    private(set) var requestedCounts: [Int] = []
 
-    func fetchNextRaces() async throws -> [Race] {
-        races
+    init(responsesByCount: [Int: [Race]]) {
+        self.responsesByCount = responsesByCount
+    }
+
+    func fetchNextRaces(count: Int) async throws -> [Race] {
+        requestedCounts.append(count)
+        return responsesByCount[count] ?? []
     }
 }
 
@@ -28,9 +34,9 @@ struct EntainCodingTaskTests {
         }
 
         let clock = ClockBox(now: Date(timeIntervalSince1970: 1_000))
-        let viewModel = await NextToGoViewModel(
-            client: MockNextRacesClient(
-                races: [
+        let client = MockNextRacesClient(
+            responsesByCount: [
+                30: [
                     Race(
                         id: "race",
                         meetingName: "The Meadows",
@@ -39,112 +45,164 @@ struct EntainCodingTaskTests {
                         category: .greyhound
                     )
                 ]
-            ),
-            nowProvider: { clock.now }
+            ]
         )
 
-        await viewModel.load()
+        let viewModel = await MainActor.run {
+            NextToGoViewModel(
+                client: client,
+                nowProvider: { clock.now }
+            )
+        }
 
-        await #expect(viewModel.rows.first?.countdown == "0s")
+        await viewModel.loadRaces()
+        let initialCountdown = await MainActor.run { viewModel.rows.first?.countdown }
+        #expect(initialCountdown == "0s")
 
         clock.now = Date(timeIntervalSince1970: 1_033)
-        await viewModel.refresh()
+        await MainActor.run {
+            viewModel.updateRows()
+        }
 
-        await #expect(viewModel.rows.first?.countdown == "-33s")
+        let updatedCountdown = await MainActor.run { viewModel.rows.first?.countdown }
+        #expect(updatedCountdown == "-33s")
     }
 
-//    @Test func nextToGoLogicSortsRowsInAscendingAdvertisedStartOrder() {
-//        let now = Date(timeIntervalSince1970: 1_000)
-//        let races = [
-//            Race(id: "late", meetingName: "Late", raceNumber: 3, advertisedStart: Date(timeIntervalSince1970: 1_120), category: .horse),
-//            Race(id: "early", meetingName: "Early", raceNumber: 1, advertisedStart: Date(timeIntervalSince1970: 1_030), category: .greyhound),
-//            Race(id: "middle", meetingName: "Middle", raceNumber: 2, advertisedStart: Date(timeIntervalSince1970: 1_090), category: .harness)
-//        ]
-//
-//        let rows = logic.makeRows(
-//            from: races,
-//            selectedCategories: [.horse, .greyhound, .harness],
-//            now: now
-//        )
-//
-//        #expect(rows.map(\.id) == ["early", "middle", "late"])
-//    }
+    @Test func nextToGoViewModelFetchesInThirtyRaceIncrementsUntilFiveVisibleRacesExist() async {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let client = MockNextRacesClient(
+            responsesByCount: [
+                30: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .horse)
+                ],
+                60: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .horse),
+                    Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: now.addingTimeInterval(30), category: .horse),
+                    Race(id: "4", meetingName: "D", raceNumber: 4, advertisedStart: now.addingTimeInterval(40), category: .horse),
+                    Race(id: "5", meetingName: "E", raceNumber: 5, advertisedStart: now.addingTimeInterval(50), category: .horse),
+                    Race(id: "6", meetingName: "F", raceNumber: 6, advertisedStart: now.addingTimeInterval(60), category: .horse)
+                ]
+            ]
+        )
 
-//    @Test func nextToGoLogicKeepsRaceVisibleAtFiftyNineSecondsPastStart() {
-//        let logic = NextToGoLogic()
-//        let race = Race(
-//            id: "race",
-//            meetingName: "Melton",
-//            raceNumber: 4,
-//            advertisedStart: Date(timeIntervalSince1970: 1_000),
-//            category: .harness
-//        )
-//
-//        let rows = logic.makeRows(
-//            from: [race],
-//            selectedCategories: [.harness],
-//            now: Date(timeIntervalSince1970: 1_059)
-//        )
-//
-//        #expect(rows.count == 1)
-//        #expect(rows[0].countdown == "-59s")
-//    }
-//
-//    @Test func nextToGoLogicRemovesRaceAtSixtySecondsPastStart() {
-//        let logic = NextToGoLogic()
-//        let race = Race(
-//            id: "race",
-//            meetingName: "Melton",
-//            raceNumber: 4,
-//            advertisedStart: Date(timeIntervalSince1970: 1_000),
-//            category: .harness
-//        )
-//
-//        let rows = logic.makeRows(
-//            from: [race],
-//            selectedCategories: [.harness],
-//            now: Date(timeIntervalSince1970: 1_060)
-//        )
-//
-//        #expect(rows.isEmpty)
-//    }
-//
-//    @Test func nextToGoLogicFormatsUpcomingCountdown() {
-//        let logic = NextToGoLogic()
-//        let race = Race(
-//            id: "race",
-//            meetingName: "Randwick",
-//            raceNumber: 2,
-//            advertisedStart: Date(timeIntervalSince1970: 1_305),
-//            category: .horse
-//        )
-//
-//        let row = logic.makeRow(from: race, now: Date(timeIntervalSince1970: 1_000))
-//
-//        #expect(row.raceNumber == "R2")
-//        #expect(row.countdown == "5m 05s")
-//        #expect(row.isExpired == false)
-//    }
-//
-//    @Test func nextToGoLogicFormatsStartedCountdown() {
-//        let logic = NextToGoLogic()
-//        let race = Race(
-//            id: "race",
-//            meetingName: "The Meadows",
-//            raceNumber: 7,
-//            advertisedStart: Date(timeIntervalSince1970: 1_000),
-//            category: .greyhound
-//        )
-//
-//        let row = logic.makeRow(from: race, now: Date(timeIntervalSince1970: 1_033))
-//
-//        #expect(row.countdown == "-33s")
-//        #expect(row.isExpired)
-//    }
+        let viewModel = await MainActor.run {
+            NextToGoViewModel(
+                client: client,
+                nowProvider: { now }
+            )
+        }
 
-    @Test func NextRacesClientDecodesAndMapsRequiredFields() throws {
-        let service = NextRacesClient()
-        let races = try service.decodeRaces(from: sampleResponseJSON)
+        await MainActor.run {
+            viewModel.selectedCategories = [.horse]
+        }
+
+        await viewModel.loadRaces()
+
+        let rows = await MainActor.run { viewModel.rows }
+        #expect(client.requestedCounts == [30, 60])
+        #expect(rows.count == 5)
+        #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
+    }
+
+    @Test func nextToGoViewModelStopsFetchingAtOneHundredTwentyAndDeduplicatesRaceIDs() async {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let client = MockNextRacesClient(
+            responsesByCount: [
+                30: [Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse)],
+                60: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .horse)
+                ],
+                90: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .horse),
+                    Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: now.addingTimeInterval(30), category: .horse)
+                ],
+                120: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .horse),
+                    Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: now.addingTimeInterval(30), category: .horse),
+                    Race(id: "4", meetingName: "D", raceNumber: 4, advertisedStart: now.addingTimeInterval(40), category: .horse)
+                ]
+            ]
+        )
+
+        let viewModel = await MainActor.run {
+            NextToGoViewModel(
+                client: client,
+                nowProvider: { now }
+            )
+        }
+
+        await MainActor.run {
+            viewModel.selectedCategories = [.horse]
+        }
+
+        await viewModel.loadRaces()
+
+        let rows = await MainActor.run { viewModel.rows }
+        #expect(client.requestedCounts == [30, 60, 90, 120])
+        #expect(rows.count == 4)
+        #expect(Set(rows.map(\.id)).count == 4)
+    }
+
+    @Test func nextToGoViewModelShowsFiveRacesWhenAllFiltersAreDeselected() async {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let client = MockNextRacesClient(
+            responsesByCount: [
+                30: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .greyhound),
+                    Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: now.addingTimeInterval(30), category: .harness),
+                    Race(id: "4", meetingName: "D", raceNumber: 4, advertisedStart: now.addingTimeInterval(40), category: .horse),
+                    Race(id: "5", meetingName: "E", raceNumber: 5, advertisedStart: now.addingTimeInterval(50), category: .greyhound)
+                ],
+                60: [
+                    Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: now.addingTimeInterval(10), category: .horse),
+                    Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: now.addingTimeInterval(20), category: .greyhound),
+                    Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: now.addingTimeInterval(30), category: .harness),
+                    Race(id: "4", meetingName: "D", raceNumber: 4, advertisedStart: now.addingTimeInterval(40), category: .horse),
+                    Race(id: "5", meetingName: "E", raceNumber: 5, advertisedStart: now.addingTimeInterval(50), category: .greyhound),
+                    Race(id: "6", meetingName: "F", raceNumber: 6, advertisedStart: now.addingTimeInterval(60), category: .harness),
+                    Race(id: "7", meetingName: "G", raceNumber: 7, advertisedStart: now.addingTimeInterval(70), category: .horse),
+                    Race(id: "8", meetingName: "H", raceNumber: 8, advertisedStart: now.addingTimeInterval(80), category: .greyhound),
+                    Race(id: "9", meetingName: "I", raceNumber: 9, advertisedStart: now.addingTimeInterval(90), category: .harness),
+                    Race(id: "10", meetingName: "J", raceNumber: 10, advertisedStart: now.addingTimeInterval(100), category: .horse),
+                    Race(id: "11", meetingName: "K", raceNumber: 11, advertisedStart: now.addingTimeInterval(110), category: .greyhound),
+                    Race(id: "12", meetingName: "L", raceNumber: 12, advertisedStart: now.addingTimeInterval(120), category: .harness),
+                    Race(id: "13", meetingName: "M", raceNumber: 13, advertisedStart: now.addingTimeInterval(130), category: .horse),
+                    Race(id: "14", meetingName: "N", raceNumber: 14, advertisedStart: now.addingTimeInterval(140), category: .greyhound),
+                    Race(id: "15", meetingName: "O", raceNumber: 15, advertisedStart: now.addingTimeInterval(150), category: .harness),
+                    Race(id: "16", meetingName: "P", raceNumber: 16, advertisedStart: now.addingTimeInterval(160), category: .horse),
+                    Race(id: "17", meetingName: "Q", raceNumber: 17, advertisedStart: now.addingTimeInterval(170), category: .greyhound),
+                    Race(id: "18", meetingName: "R", raceNumber: 18, advertisedStart: now.addingTimeInterval(180), category: .harness)
+                ]
+            ]
+        )
+
+        let viewModel = await MainActor.run {
+            NextToGoViewModel(
+                client: client,
+                nowProvider: { now }
+            )
+        }
+
+        await MainActor.run {
+            viewModel.selectedCategories = []
+        }
+
+        await viewModel.loadRaces()
+
+        let rows = await MainActor.run { viewModel.rows }
+        #expect(rows.count == 5)
+        #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
+    }
+
+    @Test func nextRacesClientDecodesAndMapsRequiredFields() throws {
+        let client = NextRacesClient()
+        let races = try client.decodeRaces(from: sampleResponseJSON)
 
         #expect(races.count == 2)
         #expect(races[0].id == "race-2")
@@ -156,11 +214,11 @@ struct EntainCodingTaskTests {
         #expect(races[1].category == RaceCategory.horse)
     }
 
-    @Test func NextRacesClientThrowsDecodingFailedForInvalidPayload() {
-        let service = NextRacesClient()
+    @Test func nextRacesClientThrowsDecodingFailedForInvalidPayload() {
+        let client = NextRacesClient()
 
         #expect(throws: NextRacesClientError.decodingFailed) {
-            try service.decodeRaces(from: Data("{}".utf8))
+            try client.decodeRaces(from: Data("{}".utf8))
         }
     }
 }

@@ -18,14 +18,20 @@ struct NextToGoView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 categoryFilters
+                
+                if viewModel.isInitialLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 24)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(viewModel.rows) { race in
+                            RaceListRow(race: race)
 
-                LazyVStack(spacing: 0) {
-                    ForEach(viewModel.rows) { race in
-                        RaceListRow(race: race)
-
-                        if race.id != viewModel.rows.last?.id {
-                            Divider()
-                                .overlay(Color.Entain.divider)
+                            if race.id != viewModel.rows.last?.id {
+                                Divider()
+                                    .overlay(Color.Entain.divider)
+                            }
                         }
                     }
                 }
