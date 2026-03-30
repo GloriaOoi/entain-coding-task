@@ -42,6 +42,7 @@ struct NextToGoRaceLogic {
                         String($0.raceNumber)
                     ),
                     countdown: TimeFormatter.countdownText(interval: $0.advertisedStart.timeIntervalSince(now)),
+                    accessibilityCountdown: TimeFormatter.accessibilityCountdownText(interval: $0.advertisedStart.timeIntervalSince(now)),
                     category: $0.category,
                     isExpired: $0.advertisedStart <= now
                 )

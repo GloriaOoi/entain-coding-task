@@ -5,3 +5,10 @@
 "race_row_accessibility_format" = "%@ race at %@, starting in %@.";
 "filter_state_selected" = "Selected";
 "filter_state_unselected" = "Not selected";
+"countdown_accessibility_started_ago_format" = "started %@ ago";
+"countdown_accessibility_minutes_seconds_format" = "%@ %@ %@ %@";
+"countdown_accessibility_seconds_only_format" = "%@ %@";
+"countdown_accessibility_minute_singular" = "minute";
+"countdown_accessibility_minute_plural" = "minutes";
+"countdown_accessibility_second_singular" = "second";
+"countdown_accessibility_second_plural" = "seconds";

@@ -96,7 +96,7 @@ struct RaceListRow: View {
             ),
             race.category.accessibilityName,
             race.meetingName,
-            race.countdown
+            race.accessibilityCountdown
         )
     }
 }
@@ -108,6 +108,7 @@ struct RaceListRow: View {
             meetingName: "Sydney",
             raceNumber: "R2",
             countdown: "3m",
+            accessibilityCountdown: "3 minutes 0 seconds",
             category: .greyhound,
             isExpired: false
         )
