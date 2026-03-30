@@ -1,1 +1,7 @@
 "race_number_format" = "R%@";
+"race_category_horse" = "Horse";
+"race_category_greyhound" = "Greyhound";
+"race_category_harness" = "Harness";
+"race_row_accessibility_format" = "%@ race at %@, starting in %@.";
+"filter_state_selected" = "Selected";
+"filter_state_unselected" = "Not selected";
