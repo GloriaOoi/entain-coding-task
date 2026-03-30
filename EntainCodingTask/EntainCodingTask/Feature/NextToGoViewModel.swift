@@ -9,16 +9,6 @@ import Foundation
 import Combine
 import SwiftUI
 
-protocol Clock {
-    func sleep(for duration: Duration) async throws
-}
-
-struct SystemClock: Clock {
-    func sleep(for duration: Duration) async throws {
-        try await Task.sleep(for: duration)
-    }
-}
-
 @MainActor
 final class NextToGoViewModel: ObservableObject {
     @Published private(set) var isInitialLoading = false
