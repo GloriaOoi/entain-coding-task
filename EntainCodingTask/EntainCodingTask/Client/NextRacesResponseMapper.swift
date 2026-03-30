@@ -7,7 +7,17 @@
 
 import Foundation
 
-struct NextRacesResponseMapper {
+protocol NextRacesResponseMapperProtocol {
+    func map(_ response: NextRacesResponse) -> [Race]
+}
+
+struct NextRacesResponseMapper: NextRacesResponseMapperProtocol {
+    
+    /// Maps NextRacesResponse to Races
+    /// - Filters out missing summaries or unsupported categories
+    ///
+    /// - Parameter response: The raw API response containing race summaries and ordering
+    /// - Returns: An array of valid `Race` objects.
     func map(_ response: NextRacesResponse) -> [Race] {
         response.data.nextToGoIDs.compactMap { raceID in
             guard let summary = response.data.raceSummaries[raceID] else {
@@ -30,11 +40,11 @@ struct NextRacesResponseMapper {
 
     private func mapCategory(from categoryID: String) -> RaceCategory? {
         switch categoryID {
-        case "4a2788f8-e825-4d36-9894-efd4baf1cfae":
+        case Constants.categoryId.horse:
             return .horse
-        case "9daef0d7-bf3c-4f50-921d-8e818c60fe61":
+        case Constants.categoryId.greyhound:
             return .greyhound
-        case "161d9be2-e909-4326-8c2c-35ed71fb460b":
+        case Constants.categoryId.harness:
             return .harness
         default:
             return nil

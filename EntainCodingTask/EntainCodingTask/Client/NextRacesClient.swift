@@ -7,22 +7,33 @@
 
 import Foundation
 
+protocol NextRacesClientProtocol {
+    func fetchNextRaces(count: Int) async throws -> [Race]
+}
+
+protocol URLSessionProtocol {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: URLSessionProtocol {}
+
+/// Currently only supports 2 types of error.
 enum NextRacesClientError: Error, Equatable {
     case requestFailed
     case decodingFailed
 }
 
-struct NextRacesClient {
-    private let session: URLSession
+struct NextRacesClient: NextRacesClientProtocol {
+    private let session: any URLSessionProtocol
     private let decoder: JSONDecoder
-    private let mapper: NextRacesResponseMapper
-    private let endpoint: NextRacesEndpoint
+    private let mapper: NextRacesResponseMapperProtocol
+    private let endpoint: NextRacesEndpointProtocol
 
     init(
-        session: URLSession = .shared,
+        session: any URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
-        mapper: NextRacesResponseMapper = NextRacesResponseMapper(),
-        endpoint: NextRacesEndpoint = NextRacesEndpoint(count: 10)
+        mapper: NextRacesResponseMapperProtocol = NextRacesResponseMapper(),
+        endpoint: any NextRacesEndpointProtocol = NextRacesEndpoint()
     ) {
         self.session = session
         self.decoder = decoder
@@ -30,11 +41,11 @@ struct NextRacesClient {
         self.endpoint = endpoint
     }
 
-    func fetchNextRaces() async throws -> [Race] {
+    func fetchNextRaces(count: Int) async throws -> [Race] {
         let request: URLRequest
 
         do {
-            request = try URLRequest(url: endpoint.url())
+            request = try URLRequest(url: endpoint.url(count: count))
         } catch {
             throw NextRacesClientError.requestFailed
         }
@@ -48,7 +59,6 @@ struct NextRacesClient {
             throw NextRacesClientError.requestFailed
         }
 
-        // Simplified version, not detailing all different kinds of error scenarios
         guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
             throw NextRacesClientError.requestFailed
         }
