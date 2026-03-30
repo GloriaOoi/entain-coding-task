@@ -22,6 +22,7 @@ struct SystemClock: Clock {
 @MainActor
 final class NextToGoViewModel: ObservableObject {
     @Published private(set) var isInitialLoading = false
+    @Published private(set) var isFetchingMore = false
     @Published var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
     @Published private(set) var rows: [RaceRow] = []
     
@@ -79,6 +80,10 @@ final class NextToGoViewModel: ObservableObject {
             )
             .prefix(visibleRowLimit)
         )
+    }
+
+    var shouldShowBackgroundSpinner: Bool {
+        isFetchingMore && rows.count < visibleRowLimit
     }
     
     func makeRows(

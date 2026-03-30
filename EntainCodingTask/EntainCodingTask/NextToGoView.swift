@@ -34,6 +34,12 @@ struct NextToGoView: View {
                             }
                         }
                     }
+
+                    if viewModel.shouldShowBackgroundSpinner {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 24)
+                    }
                 }
             }
         }
