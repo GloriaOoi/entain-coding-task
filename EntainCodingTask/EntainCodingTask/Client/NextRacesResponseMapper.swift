@@ -12,6 +12,12 @@ protocol NextRacesResponseMapperProtocol {
 }
 
 struct NextRacesResponseMapper: NextRacesResponseMapperProtocol {
+    
+    /// Maps NextRacesResponse to Races
+    /// - Filters out missing summaries or unsupported categories
+    ///
+    /// - Parameter response: The raw API response containing race summaries and ordering
+    /// - Returns: An array of valid `Race` objects.
     func map(_ response: NextRacesResponse) -> [Race] {
         response.data.nextToGoIDs.compactMap { raceID in
             guard let summary = response.data.raceSummaries[raceID] else {
