@@ -162,8 +162,24 @@ final class NextToGoViewModel: ObservableObject {
         fetchTask?.cancel()
     }
 
+    /// Fetches additional races in increments until there are enough
+    /// visible races per selected category or the maximum fetch limit is reached.
+    ///
+    /// After each fetch:
+    /// - Newly fetched races are merged into the existing pool
+    /// - Rows are recomputed to reflect the latest data
+    ///
+    /// This runs after the initial load and may continue in the background.
     private func fetchUntilSufficient() async {
+        guard !hasSufficientRacesForCurrentFilter(), currentRequestedCount < maxFetchCount else {
+            isFetchingMore = false
+            return
+        }
+
+        isFetchingMore = true
+
         defer {
+            isFetchingMore = false
             fetchTask = nil
         }
 
@@ -180,6 +196,16 @@ final class NextToGoViewModel: ObservableObject {
         }
     }
 
+    /// Merges newly fetched races into the existing race pool.
+    ///
+    /// This function performs an "upsert" based on `Race.id`:
+    /// - If a race with the same id already exists, it is replaced with the latest fetched value.
+    /// - If a race is new, it is added to the pool.
+    /// - Existing races that are not present in the latest fetch are retained.
+    ///
+    /// Note:
+    /// - This does not remove stale races. Expiry is handled separately via `isVisible`.
+    /// - Ordering is not preserved; sorting is applied later when building rows.
     private func merge(_ races: [Race]) {
         var racesByID = Dictionary(uniqueKeysWithValues: racePool.map { ($0.id, $0) })
         for race in races {
