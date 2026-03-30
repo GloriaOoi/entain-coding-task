@@ -24,4 +24,15 @@ enum RaceCategory: CaseIterable, Identifiable, Hashable {
             return Constants.RaceCategory.harness
         }
     }
+
+    var accessibilityName: String {
+        switch self {
+        case .horse:
+            return NSLocalizedString("race_category_horse", comment: "Accessibility name for horse race category")
+        case .greyhound:
+            return NSLocalizedString("race_category_greyhound", comment: "Accessibility name for greyhound race category")
+        case .harness:
+            return NSLocalizedString("race_category_harness", comment: "Accessibility name for harness race category")
+        }
+    }
 }

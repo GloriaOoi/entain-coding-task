@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct NextToGoView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @StateObject private var viewModel: NextToGoViewModel
 
     init() {
@@ -61,19 +62,33 @@ struct NextToGoView: View {
     private var categoryFilters: some View {
         HStack(spacing: 12) {
             ForEach(RaceCategory.allCases) { category in
+                let isSelected = viewModel.selectedCategories.contains(category)
+
                 Button {
                     viewModel.toggleCategory(category)
                 } label: {
                     Image(systemName: category.symbolName)
-                        .font(.title3)
-                        .foregroundStyle(viewModel.selectedCategories.contains(category) ? Color.Entain.filterIconActive : Color.Entain.filterIconInactive)
-                        .frame(width: 56, height: 56)
+                        .font(dynamicTypeSize.isAccessibilitySize ? .title2 : .title3)
+                        .foregroundStyle(isSelected ? Color.Entain.filterIconActive : Color.Entain.filterIconInactive)
+                        .frame(
+                            minWidth: dynamicTypeSize.isAccessibilitySize ? 72 : 56,
+                            minHeight: dynamicTypeSize.isAccessibilitySize ? 72 : 56
+                        )
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(viewModel.selectedCategories.contains(category) ? Color.Entain.filterBackgroundActive : Color.Entain.filterBackgroundInactive)
+                                .fill(isSelected ? Color.Entain.filterBackgroundActive : Color.Entain.filterBackgroundInactive)
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(category.accessibilityName))
+                .accessibilityValue(
+                    Text(
+                        isSelected
+                        ? NSLocalizedString("filter_state_selected", comment: "Accessibility value for a selected filter")
+                        : NSLocalizedString("filter_state_unselected", comment: "Accessibility value for an unselected filter")
+                    )
+                )
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
     }

@@ -12,6 +12,7 @@ struct RaceRow: Identifiable, Equatable {
     let meetingName: String
     let raceNumber: String
     let countdown: String
+    let accessibilityCountdown: String
     let category: RaceCategory
     let isExpired: Bool
 }
