@@ -9,27 +9,34 @@ import SwiftUI
 
 struct NextToGoView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @StateObject private var viewModel: NextToGoViewModel
-
-    init() {
-        _viewModel = StateObject(wrappedValue: NextToGoViewModel())
-    }
+    @State private var viewModel = NextToGoViewModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 categoryFilters
+
+                if viewModel.viewState.hasAPIError {
+                    Text(
+                        NSLocalizedString(
+                            "api_error_message",
+                            comment: "Inline error message shown when the API request fails"
+                        )
+                    )
+                    .font(.body)
+                    .foregroundStyle(Color.Entain.primaryText)
+                }
                 
-                if viewModel.isInitialLoading {
+                if viewModel.viewState.isInitialLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 24)
                 } else {
                     LazyVStack(spacing: 0) {
-                        ForEach(viewModel.rows) { race in
+                        ForEach(viewModel.viewState.rows) { race in
                             RaceListRow(race: race)
 
-                            if race.id != viewModel.rows.last?.id {
+                            if race.id != viewModel.viewState.rows.last?.id {
                                 Divider()
                                     .overlay(Color.Entain.divider)
                             }
@@ -62,7 +69,7 @@ struct NextToGoView: View {
     private var categoryFilters: some View {
         HStack(spacing: 12) {
             ForEach(RaceCategory.allCases) { category in
-                let isSelected = viewModel.selectedCategories.contains(category)
+                let isSelected = viewModel.viewState.selectedCategories.contains(category)
 
                 Button {
                     viewModel.toggleCategory(category)

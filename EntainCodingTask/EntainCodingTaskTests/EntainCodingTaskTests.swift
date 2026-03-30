@@ -42,7 +42,7 @@ struct EntainCodingTaskTests {
         }
 
         await viewModel.loadRaces()
-        let initialCountdown = await MainActor.run { viewModel.rows.first?.countdown }
+        let initialCountdown = await MainActor.run { viewModel.viewState.rows.first?.countdown }
         #expect(initialCountdown == "0s")
 
         clock.now = Date(timeIntervalSince1970: 1_033)
@@ -50,7 +50,7 @@ struct EntainCodingTaskTests {
             viewModel.updateRows()
         }
 
-        let updatedCountdown = await MainActor.run { viewModel.rows.first?.countdown }
+        let updatedCountdown = await MainActor.run { viewModel.viewState.rows.first?.countdown }
         #expect(updatedCountdown == "-33s")
     }
 
@@ -93,12 +93,12 @@ struct EntainCodingTaskTests {
         }
 
         await MainActor.run {
-            viewModel.selectedCategories = [.horse]
+            viewModel.setSelectedCategories([.horse])
         }
 
         await viewModel.loadRaces()
 
-        let rows = await MainActor.run { viewModel.rows }
+        let rows = await MainActor.run { viewModel.viewState.rows }
         #expect(client.requestedCounts == [30, 60])
         #expect(rows.count == 5)
         #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
@@ -135,12 +135,12 @@ struct EntainCodingTaskTests {
         }
 
         await MainActor.run {
-            viewModel.selectedCategories = [.horse]
+            viewModel.setSelectedCategories([.horse])
         }
 
         await viewModel.loadRaces()
 
-        let rows = await MainActor.run { viewModel.rows }
+        let rows = await MainActor.run { viewModel.viewState.rows }
         #expect(client.requestedCounts == [30, 60, 90, 120])
         #expect(rows.count == 4)
         #expect(Set(rows.map(\.id)).count == 4)
@@ -234,12 +234,12 @@ struct EntainCodingTaskTests {
         }
 
         await MainActor.run {
-            viewModel.selectedCategories = []
+            viewModel.setSelectedCategories([])
         }
 
         await viewModel.loadRaces()
 
-        let rows = await MainActor.run { viewModel.rows }
+        let rows = await MainActor.run { viewModel.viewState.rows }
         #expect(rows.count == 5)
         #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
     }
