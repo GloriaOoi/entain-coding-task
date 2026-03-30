@@ -75,6 +75,11 @@ No caching between sessions is implemented. Each app launch fetches fresh data
 1. VoiceOver and Dynamic Type are supported  
 2. The production app does not currently support dark mode, so dark mode is intentionally excluded to focus on core functionality  
 
+### Linting
+SwiftLint is not include, but would definitely be required in production code to ensure consistency across development work.
+
+### Localisation
+SwiftGen is not included, but would definitely be required in production code to ensure consistency across development work. Currently all hardcoded strings are localised in Strings.swift
 
 ### Limitations
 1. Due to uneven distribution of race categories, it is possible that fewer than 5 races are available for a selected filter, even after reaching the maximum fetch cap. 

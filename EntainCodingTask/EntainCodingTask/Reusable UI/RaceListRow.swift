@@ -89,14 +89,10 @@ struct RaceListRow: View {
     }
 
     private var rowAccessibilityLabel: String {
-        String.localizedStringWithFormat(
-            NSLocalizedString(
-                "race_row_accessibility_format",
-                comment: "VoiceOver label for a race row. Parameters: category, meeting name, countdown"
-            ),
-            race.category.accessibilityName,
-            race.meetingName,
-            race.accessibilityCountdown
+        Strings.raceRowAccessibility(
+            category: race.category.accessibilityName,
+            meetingName: race.meetingName,
+            countdown: race.accessibilityCountdown
         )
     }
 }

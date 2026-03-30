@@ -33,14 +33,7 @@ struct NextToGoRaceLogic {
                 RaceRow(
                     id: $0.id,
                     meetingName: $0.meetingName,
-                    raceNumber: String(
-                        format: NSLocalizedString(
-                            "race_number_format",
-                            comment: "Race number label format"
-                        ),
-                        locale: Locale.current,
-                        String($0.raceNumber)
-                    ),
+                    raceNumber: Strings.raceNumber($0.raceNumber),
                     countdown: TimeFormatter.countdownText(interval: $0.advertisedStart.timeIntervalSince(now)),
                     accessibilityCountdown: TimeFormatter.accessibilityCountdownText(interval: $0.advertisedStart.timeIntervalSince(now)),
                     category: $0.category,

@@ -17,12 +17,7 @@ struct NextToGoView: View {
                 categoryFilters
 
                 if viewModel.viewState.hasAPIError {
-                    Text(
-                        NSLocalizedString(
-                            "api_error_message",
-                            comment: "Inline error message shown when the API request fails"
-                        )
-                    )
+                    Text(Strings.apiErrorMessage)
                     .font(.body)
                     .foregroundStyle(Color.Entain.primaryText)
                 }
@@ -91,8 +86,8 @@ struct NextToGoView: View {
                 .accessibilityValue(
                     Text(
                         isSelected
-                        ? NSLocalizedString("filter_state_selected", comment: "Accessibility value for a selected filter")
-                        : NSLocalizedString("filter_state_unselected", comment: "Accessibility value for an unselected filter")
+                        ? Strings.filterStateSelected
+                        : Strings.filterStateUnselected
                     )
                 )
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
