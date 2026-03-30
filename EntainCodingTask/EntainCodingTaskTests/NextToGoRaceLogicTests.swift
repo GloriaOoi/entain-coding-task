@@ -33,6 +33,24 @@ struct NextToGoRaceLogicTests {
         #expect(rows.map(\.id) == ["1", "2", "3"])
     }
 
+    @Test func makeRowsFallsBackToRaceNumberWhenAdvertisedStartMatches() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let start = now.addingTimeInterval(20)
+        let races = [
+            Race(id: "2", meetingName: "B", raceNumber: 2, advertisedStart: start, category: .greyhound),
+            Race(id: "1", meetingName: "A", raceNumber: 1, advertisedStart: start, category: .horse),
+            Race(id: "3", meetingName: "C", raceNumber: 3, advertisedStart: start, category: .harness)
+        ]
+
+        let rows = logic.makeRows(
+            from: races,
+            selectedCategories: [],
+            now: now
+        )
+
+        #expect(rows.map(\.id) == ["1", "2", "3"])
+    }
+
     @Test func isVisibleKeepsRaceUntilSixtySecondsPastStart() {
         let race = Race(
             id: "race",
