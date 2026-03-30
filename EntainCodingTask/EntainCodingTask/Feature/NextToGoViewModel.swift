@@ -11,7 +11,6 @@ import SwiftUI
 
 @MainActor
 final class NextToGoViewModel: ObservableObject {
-    
     // TODO: Could create 1 published object ViewState, instead of separate items
     @Published private(set) var isInitialLoading = false
     @Published private(set) var isFetchingMore = false
@@ -21,6 +20,7 @@ final class NextToGoViewModel: ObservableObject {
     private let client: any NextRacesClientProtocol
     private let nowProvider: () -> Date
     private let clock: Clock
+    private let raceLogic: NextToGoRaceLogic
     private var racePool: [Race] = []
     private var countdownTask: Task<Void, Never>?
     private var fetchTask: Task<Void, Never>?
@@ -36,11 +36,16 @@ final class NextToGoViewModel: ObservableObject {
     init(
         client: any NextRacesClientProtocol = NextRacesClient(),
         nowProvider: @escaping () -> Date = Date.init,
-        clock: any Clock = SystemClock()
+        clock: any Clock = SystemClock(),
+        raceLogic: NextToGoRaceLogic? = nil
     ) {
         self.client = client
         self.nowProvider = nowProvider
         self.clock = clock
+        self.raceLogic = raceLogic ?? NextToGoRaceLogic(
+            expiryThreshold: expiryThreshold,
+            desiredRaceCountPerCategory: desiredRaceCountPerCategory
+        )
     }
     
     func onDisappear() {
@@ -105,7 +110,7 @@ final class NextToGoViewModel: ObservableObject {
     /// Rebuilds the UI rows from the current pool and caps the list at five items.
     func updateRows() {
         rows = Array(
-            makeRows(
+            raceLogic.makeRows(
                 from: racePool,
                 selectedCategories: selectedCategories,
                 now: nowProvider()
@@ -117,41 +122,6 @@ final class NextToGoViewModel: ObservableObject {
     /// Show a spinner if list count is less than 5 and is still fetching
     var shouldShowBackgroundSpinner: Bool {
         isFetchingMore && rows.count < visibleRowLimit
-    }
-    
-    /// Transforms races into `RaceRow` values for presentation only.
-    /// - Filters races based on the selected categories (or all if none selected)
-    /// - Excludes races that are no longer visible based on expiry rules
-    /// - Sorts races by advertised start time in ascending order
-    ///
-    /// - Parameters:
-    ///   - races: The full list of available races
-    ///   - selectedCategories: The currently selected category filters
-    ///   - now: The current time used for visibility and countdown calculations
-    /// - Returns: An ordered array of `RaceRow` ready for display
-    func makeRows(
-        from races: [Race],
-        selectedCategories: Set<RaceCategory>,
-        now: Date
-    ) -> [RaceRow] {
-        races
-            .filter { effectiveSelectedCategories(for: selectedCategories).contains($0.category) }
-            .filter { isVisible($0, now: now) }
-            .sorted { $0.advertisedStart < $1.advertisedStart }
-            .map {
-                RaceRow(
-                    id: $0.id,
-                    meetingName: $0.meetingName,
-                    raceNumber: "R\($0.raceNumber)",
-                    countdown: TimeFormatter.countdownText(interval: $0.advertisedStart.timeIntervalSince(now)),
-                    category: $0.category,
-                    isExpired: $0.advertisedStart <= now
-                ) }
-    }
-    
-    /// Races remain visible until they are 60 seconds past the advertised start.
-    func isVisible(_ race: Race, now: Date) -> Bool {
-        now.timeIntervalSince(race.advertisedStart) < expiryThreshold
     }
     
     /// Keeps countdown text fresh and lets the view model decide
@@ -278,35 +248,12 @@ final class NextToGoViewModel: ObservableObject {
     /// Returns whether each category currently has at least
     /// `desiredRaceCountPerCategory` visible races.
     private func isCurrentlySufficient() -> Bool {
-        let now = nowProvider()
-
-        let visibleRaces = racePool.filter { race in
-            isVisible(race, now: now)
-        }
-
-        return RaceCategory.allCases.allSatisfy { category in
-            visibleRaces.filter { $0.category == category }.count >= desiredRaceCountPerCategory
-        }
+        raceLogic.isCurrentlySufficient(races: racePool, now: nowProvider())
     }
 
     /// Tracks the current visible supply for each category so the countdown
     /// loop can decide whether another fetch cycle is needed.
     private func currentVisibleCountsByCategory() -> [RaceCategory: Int] {
-        let now = nowProvider()
-        let visibleRaces = racePool.filter { isVisible($0, now: now) }
-        return Dictionary(
-            grouping: visibleRaces,
-            by: \.category
-        ).mapValues(\.count)
-    }
-
-    /// Applies user-facing category filtering only. This does not affect
-    /// the base sufficiency rules used to decide whether more data is needed.
-    private func effectiveSelectedCategories(for selectedCategories: Set<RaceCategory>) -> Set<RaceCategory> {
-        if selectedCategories.isEmpty {
-            return Set(RaceCategory.allCases)
-        }
-
-        return selectedCategories
+        raceLogic.visibleCountsByCategory(for: racePool, now: nowProvider())
     }
 }
