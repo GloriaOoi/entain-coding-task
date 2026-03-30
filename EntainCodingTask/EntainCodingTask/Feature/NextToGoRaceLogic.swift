@@ -13,6 +13,7 @@ struct NextToGoRaceLogic {
     let desiredRaceCountPerCategory: Int
 
     /// Builds display rows from the current race pool using the active UI filters.
+    /// Rows are sorted primarily based on startTime, and then raceNumber
     func makeRows(
         from races: [Race],
         selectedCategories: Set<RaceCategory>,
