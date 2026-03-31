@@ -67,6 +67,9 @@ Countdown and expiry are calculated locally using the device’s current time.
 ### Deduplication and Data Stability
 Races are deduplicated using `race_id` when merging results from multiple fetches. If the same race appears in subsequent responses, the data from the latest fetch will be maintained.
 
+### Sorting Assumption
+Races are displayed in ascending order of their advertised start time. When multiple races share the same advertised start time, they are further ordered by race number.
+
 ### Caching
 No caching between sessions is implemented. Each app launch fetches fresh data.
 
