@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum RaceCategory: CaseIterable, Identifiable, Hashable {
+enum RaceCategory: CaseIterable, Identifiable, Hashable, Sendable {
     case horse
     case greyhound
     case harness

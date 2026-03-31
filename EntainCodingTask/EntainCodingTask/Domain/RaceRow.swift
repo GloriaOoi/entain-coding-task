@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct RaceRow: Identifiable, Equatable {
+struct RaceRow: Identifiable, Equatable, Sendable {
     let id: String
     let meetingName: String
     let raceNumber: String

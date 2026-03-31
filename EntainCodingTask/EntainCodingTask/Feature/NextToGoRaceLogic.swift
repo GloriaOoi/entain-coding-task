@@ -8,7 +8,7 @@
 import Foundation
 
 /// Pure rules for visibility, ordering, row mapping, and category sufficiency.
-struct NextToGoRaceLogic {
+struct NextToGoRaceLogic: Sendable {
     let expiryThreshold: TimeInterval
     let desiredRaceCountPerCategory: Int
 

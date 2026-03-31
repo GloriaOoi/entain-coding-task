@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol NextRacesResponseMapperProtocol {
+protocol NextRacesResponseMapperProtocol: Sendable {
     func map(_ response: NextRacesResponse) -> [Race]
 }
 

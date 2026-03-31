@@ -18,7 +18,7 @@ protocol URLSessionProtocol {
 extension URLSession: URLSessionProtocol {}
 
 /// Currently only supports 2 types of error.
-enum NextRacesClientError: Error, Equatable {
+enum NextRacesClientError: Error, Equatable, Sendable {
     case requestFailed
     case decodingFailed
 }
@@ -26,13 +26,13 @@ enum NextRacesClientError: Error, Equatable {
 struct NextRacesClient: NextRacesClientProtocol {
     private let session: any URLSessionProtocol
     private let decoder: JSONDecoder
-    private let mapper: NextRacesResponseMapperProtocol
-    private let endpoint: NextRacesEndpointProtocol
+    private let mapper: any NextRacesResponseMapperProtocol
+    private let endpoint: any NextRacesEndpointProtocol
 
     init(
         session: any URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
-        mapper: NextRacesResponseMapperProtocol = NextRacesResponseMapper(),
+        mapper: any NextRacesResponseMapperProtocol = NextRacesResponseMapper(),
         endpoint: any NextRacesEndpointProtocol = NextRacesEndpoint()
     ) {
         self.session = session
