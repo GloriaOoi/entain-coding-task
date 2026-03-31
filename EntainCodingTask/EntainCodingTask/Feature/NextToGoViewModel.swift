@@ -35,13 +35,19 @@ final class NextToGoViewModel {
     private var countdownTask: Task<Void, Never>?
     private var fetchTask: Task<Void, Never>?
     private var currentRequestedCount = 0
+    private var previousFetchedRaceCount: Int?
     private var visibleCountsByCategory: [RaceCategory: Int] = [:]
+    private var isAPIExhausted = false
     
     private let expiryThreshold: TimeInterval = 60
     private let visibleRowLimit = 5
     private let desiredRaceCountPerCategory = 6
     private let fetchStep = 30
     private let maxFetchCount = 120
+    
+    private var shouldContinueFetching: Bool {
+        !isCurrentlySufficient() && !isAPIExhausted && hasRemainingFetchCapacity
+    }
     
     init(
         client: (any NextRacesClientProtocol)? = nil,
@@ -69,14 +75,17 @@ final class NextToGoViewModel {
     /// then continues topping up in the background if needed.
     func loadRaces() async {
         viewState.screenState = .loading
+        previousFetchedRaceCount = nil
+        isAPIExhausted = false
 
         do {
             currentRequestedCount = fetchStep
             let races = try await client.fetchNextRaces(count: currentRequestedCount)
+            previousFetchedRaceCount = races.count
             merge(races)
             startCountdownLoopIfNeeded()
-            updateRows()
-            visibleCountsByCategory = currentVisibleCountsByCategory()
+            rebuildVisibleRows()
+            visibleCountsByCategory = getCurrentVisibleCountsByCategory()
             viewState.screenState = .content
 
             await fetchUntilSufficient()
@@ -89,8 +98,8 @@ final class NextToGoViewModel {
     /// Recomputes visible rows. When enabled, it evaluates whether any category
     /// is below the required visible race count on this tick.
     func refreshRows(triggerFetchIfNeeded: Bool) {
-        updateRows()
-        visibleCountsByCategory = currentVisibleCountsByCategory()
+        rebuildVisibleRows()
+        visibleCountsByCategory = getCurrentVisibleCountsByCategory()
 
         guard triggerFetchIfNeeded else {
             return
@@ -113,7 +122,7 @@ final class NextToGoViewModel {
     }
     
     /// Rebuilds the UI rows from the current pool and caps the list at five items.
-    func updateRows() {
+    func rebuildVisibleRows() {
         viewState.rows = Array(
             raceLogic.makeRows(
                 from: racePool,
@@ -127,28 +136,6 @@ final class NextToGoViewModel {
     /// Show a spinner if list count is less than 5 and is still fetching
     var shouldShowBackgroundSpinner: Bool {
         viewState.isFetchingMore && viewState.rows.count < visibleRowLimit
-    }
-    
-    /// Keeps countdown text fresh and lets the view model decide
-    /// whether a background top-up fetch should start.
-    func startCountdownLoop() {
-        guard countdownTask == nil else {
-            return
-        }
-        
-        countdownTask = Task { [weak self] in
-            guard let self else { return }
-            
-            while !Task.isCancelled {
-                do {
-                    try await clock.sleep(for: .seconds(1))
-                } catch {
-                    break
-                }
-                
-                self.refreshRows(triggerFetchIfNeeded: true)
-            }
-        }
     }
     
     func toggleCategory(_ category: RaceCategory) {
@@ -173,49 +160,62 @@ final class NextToGoViewModel {
 
         startCountdownLoop()
     }
-
-    /// Fetches more races in 30-item steps until every category has enough
-    /// visible races or the fetch limit is reached.
-    private func fetchUntilSufficient() async {
-        if currentRequestedCount == 0 {
-            currentRequestedCount = fetchStep
+    
+    /// Keeps countdown text fresh and lets the view model decide
+    /// whether a background top-up fetch should start.
+    private func startCountdownLoop() {
+        guard countdownTask == nil else {
+            return
         }
+        
+        countdownTask = Task { [weak self] in
+            guard let self else { return }
+            
+            while !Task.isCancelled {
+                do {
+                    try await clock.sleep(for: .seconds(1))
+                } catch {
+                    break
+                }
+                
+                self.refreshRows(triggerFetchIfNeeded: true)
+            }
+        }
+    }
 
-        guard !isCurrentlySufficient() && currentRequestedCount <= maxFetchCount else {
-            viewState.isFetchingMore = false
-            currentRequestedCount = 0
+    /// Repeatedly fetches races using increasing result limits (30, 60, 90...)
+    /// until each category has enough visible races or the API is exhausted.
+    ///
+    /// Note:
+    /// - This is not pagination. Each request returns a fresh snapshot of the next N races.
+    /// - Results may overlap or shift between calls, so races are merged by id.
+    private func fetchUntilSufficient() async {
+        prepareFetchCycle()
+
+        guard shouldContinueFetching else {
+            finishFetchCycle()
             return
         }
 
         viewState.isFetchingMore = true
 
         defer {
-            viewState.isFetchingMore = false
-            fetchTask = nil
-            currentRequestedCount = 0
+            finishFetchCycle()
         }
 
-        while !isCurrentlySufficient() && currentRequestedCount <= maxFetchCount {
-            let nextRequestedCount: Int
-            if currentRequestedCount == 0 {
-                nextRequestedCount = fetchStep
-            } else {
-                nextRequestedCount = min(currentRequestedCount + fetchStep, maxFetchCount)
-            }
-
-            currentRequestedCount = nextRequestedCount
-
+        while shouldContinueFetching {
             do {
+                currentRequestedCount = getNextRequestedCount()
                 let races = try await client.fetchNextRaces(count: currentRequestedCount)
-                merge(races)
-                startCountdownLoopIfNeeded()
-                updateRows()
-                visibleCountsByCategory = currentVisibleCountsByCategory()
-                viewState.screenState = .content
-            } catch {
-                if viewState.rows.isEmpty {
-                    viewState.screenState = .error
+                let didReachAPIResultLimit = updateAPIExhaustionState(with: races.count)
+                applyFetchedRaces(races)
+
+                if didReachAPIResultLimit {
+                    isAPIExhausted = true
+                    break
                 }
+            } catch {
+                handleFetchFailure()
                 break
             }
         }
@@ -223,7 +223,7 @@ final class NextToGoViewModel {
 
     /// Starts a single background replenishment cycle when the base pool is insufficient.
     private func startBackgroundFetchIfNeeded() {
-        guard !isCurrentlySufficient() else {
+        guard !isCurrentlySufficient(), !isAPIExhausted else {
             return
         }
 
@@ -267,7 +267,54 @@ final class NextToGoViewModel {
 
     /// Tracks the current visible supply for each category so the countdown
     /// loop can decide whether another fetch cycle is needed.
-    private func currentVisibleCountsByCategory() -> [RaceCategory: Int] {
+    private func getCurrentVisibleCountsByCategory() -> [RaceCategory: Int] {
         raceLogic.visibleCountsByCategory(for: racePool, now: nowProvider())
+    }
+
+    private func prepareFetchCycle() {
+        if currentRequestedCount == 0 {
+            currentRequestedCount = fetchStep
+        }
+    }
+
+    private func finishFetchCycle() {
+        viewState.isFetchingMore = false
+        fetchTask = nil
+        currentRequestedCount = 0
+    }
+
+    private func getNextRequestedCount() -> Int {
+        if currentRequestedCount == 0 {
+            return fetchStep
+        }
+
+        return min(currentRequestedCount + fetchStep, maxFetchCount)
+    }
+
+    private var hasRemainingFetchCapacity: Bool {
+        getNextRequestedCount() > currentRequestedCount
+    }
+
+    /// If the API returns the same count as the previous fetch,
+    /// we assume we’ve hit the API’s maximum result limit.
+    /// This prevents unnecessary repeated fetches.
+    private func updateAPIExhaustionState(with fetchedRaceCount: Int) -> Bool {
+        let didReachAPIResultLimit = previousFetchedRaceCount == fetchedRaceCount
+        previousFetchedRaceCount = fetchedRaceCount
+        return didReachAPIResultLimit
+    }
+
+    private func applyFetchedRaces(_ races: [Race]) {
+        merge(races)
+        startCountdownLoopIfNeeded()
+        rebuildVisibleRows()
+        visibleCountsByCategory = getCurrentVisibleCountsByCategory()
+        viewState.screenState = .content
+    }
+
+    private func handleFetchFailure() {
+        if viewState.rows.isEmpty {
+            viewState.screenState = .error
+        }
     }
 }

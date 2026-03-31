@@ -25,6 +25,7 @@ The app uses a progressive fetch strategy to maintain a sufficient pool of races
 - Initial fetch: 30 races count.
 - If visible races for any single category is less than 6 → increase fetch count (60 → 90 → 120).
 - Maximum cap: 120 races.
+- If the API returns the same raw item count on consecutive fetches, stop fetching early and treat the API result set as exhausted.
 - If still insufficient, display available races without fulfilling 5 for all categories.
 
 The UI always displays a maximum of 5 races for any combination of filter.
@@ -66,6 +67,9 @@ Countdown and expiry are calculated locally using the device’s current time.
 ### Deduplication and Data Stability
 Races are deduplicated using `race_id` when merging results from multiple fetches. If the same race appears in subsequent responses, the data from the latest fetch will be maintained.
 
+### Sorting Assumption
+Races are displayed in ascending order of their advertised start time. When multiple races share the same advertised start time, they are further ordered by race number.
+
 ### Caching
 No caching between sessions is implemented. Each app launch fetches fresh data.
 
@@ -87,4 +91,4 @@ Logging is not currently implemented. A Logger should be introduced to support s
 
 ### Future enhancements
 To request additional API documentation (e.g. Swagger) to better understand available parameters.
-To confirm whether category-based filtering is supported by the API.
+To confirm whether category-based filtering or pagination is supported by the API.
