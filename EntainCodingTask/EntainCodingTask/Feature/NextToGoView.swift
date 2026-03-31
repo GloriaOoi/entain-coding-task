@@ -16,17 +16,18 @@ struct NextToGoView: View {
             VStack(alignment: .leading, spacing: 24) {
                 categoryFilters
 
-                if viewModel.viewState.hasAPIError {
-                    Text(Strings.apiErrorMessage)
-                    .font(.body)
-                    .foregroundStyle(Color.Entain.primaryText)
-                }
-                
-                if viewModel.viewState.isInitialLoading {
+                switch viewModel.viewState.screenState {
+                case .loading:
                     ProgressView()
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 24)
-                } else {
+                case .error:
+                    VStack {
+                        Text(Strings.apiErrorMessage)
+                        .font(.body)
+                        .foregroundStyle(Color.Entain.primaryText)
+                    }
+                case .content:
                     LazyVStack(spacing: 0) {
                         ForEach(viewModel.viewState.rows) { race in
                             RaceListRow(race: race)
