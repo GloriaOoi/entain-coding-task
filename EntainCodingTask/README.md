@@ -25,6 +25,7 @@ The app uses a progressive fetch strategy to maintain a sufficient pool of races
 - Initial fetch: 30 races count.
 - If visible races for any single category is less than 6 → increase fetch count (60 → 90 → 120).
 - Maximum cap: 120 races.
+- If the API returns the same raw item count on consecutive fetches, stop fetching early and treat the API result set as exhausted.
 - If still insufficient, display available races without fulfilling 5 for all categories.
 
 The UI always displays a maximum of 5 races for any combination of filter.

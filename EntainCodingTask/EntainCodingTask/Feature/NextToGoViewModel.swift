@@ -35,7 +35,9 @@ final class NextToGoViewModel {
     private var countdownTask: Task<Void, Never>?
     private var fetchTask: Task<Void, Never>?
     private var currentRequestedCount = 0
+    private var previousFetchedRaceCount: Int?
     private var visibleCountsByCategory: [RaceCategory: Int] = [:]
+    private var isAPIExhausted = false
     
     private let expiryThreshold: TimeInterval = 60
     private let visibleRowLimit = 5
@@ -69,10 +71,13 @@ final class NextToGoViewModel {
     /// then continues topping up in the background if needed.
     func loadRaces() async {
         viewState.screenState = .loading
+        previousFetchedRaceCount = nil
+        isAPIExhausted = false
 
         do {
             currentRequestedCount = fetchStep
             let races = try await client.fetchNextRaces(count: currentRequestedCount)
+            previousFetchedRaceCount = races.count
             merge(races)
             startCountdownLoopIfNeeded()
             updateRows()
@@ -181,7 +186,7 @@ final class NextToGoViewModel {
             currentRequestedCount = fetchStep
         }
 
-        guard !isCurrentlySufficient() && currentRequestedCount <= maxFetchCount else {
+        guard !isCurrentlySufficient() && currentRequestedCount <= maxFetchCount && !isAPIExhausted else {
             viewState.isFetchingMore = false
             currentRequestedCount = 0
             return
@@ -207,11 +212,18 @@ final class NextToGoViewModel {
 
             do {
                 let races = try await client.fetchNextRaces(count: currentRequestedCount)
+                let didReachAPIResultLimit = previousFetchedRaceCount == races.count
+                previousFetchedRaceCount = races.count
                 merge(races)
                 startCountdownLoopIfNeeded()
                 updateRows()
                 visibleCountsByCategory = currentVisibleCountsByCategory()
                 viewState.screenState = .content
+
+                if didReachAPIResultLimit {
+                    isAPIExhausted = true
+                    break
+                }
             } catch {
                 if viewState.rows.isEmpty {
                     viewState.screenState = .error
@@ -223,7 +235,7 @@ final class NextToGoViewModel {
 
     /// Starts a single background replenishment cycle when the base pool is insufficient.
     private func startBackgroundFetchIfNeeded() {
-        guard !isCurrentlySufficient() else {
+        guard !isCurrentlySufficient(), !isAPIExhausted else {
             return
         }
 

@@ -152,6 +152,42 @@ struct EntainCodingTaskTests {
         #expect(screenState == .content)
     }
 
+    @Test func nextToGoViewModelStopsFetchingWhenAPIReturnsTheSameCountTwice() async {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let horseRaces = (1...10).map {
+            Race(id: "h\($0)", meetingName: "H\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0)), category: .horse)
+        }
+        let greyhoundRaces = (1...10).map {
+            Race(id: "g\($0)", meetingName: "G\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0 + 20)), category: .greyhound)
+        }
+        let harnessRaces = (1...10).map {
+            Race(id: "n\($0)", meetingName: "N\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0 + 40)), category: .harness)
+        }
+        let repeatedThirtyRaces = horseRaces + greyhoundRaces + harnessRaces
+
+        let client = MockNextRacesClient(
+            responsesByCount: [
+                30: repeatedThirtyRaces,
+                60: repeatedThirtyRaces
+            ]
+        )
+
+        let viewModel = await MainActor.run {
+            NextToGoViewModel(
+                client: client,
+                nowProvider: { now }
+            )
+        }
+
+        await viewModel.loadRaces()
+        await MainActor.run {
+            viewModel.refreshRows(triggerFetchIfNeeded: true)
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(client.requestedCounts == [30, 60])
+    }
+
 
     @Test func nextToGoViewModelDoesNotRefetchOnTickWhenNothingJustExpired() async {
         let now = Date(timeIntervalSince1970: 1_000)
