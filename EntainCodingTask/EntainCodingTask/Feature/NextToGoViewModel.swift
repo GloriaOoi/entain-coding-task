@@ -39,14 +39,14 @@ final class NextToGoViewModel {
     private let maxFetchCount = 120
     
     init(
-        client: any NextRacesClientProtocol = NextRacesClient(),
+        client: (any NextRacesClientProtocol)? = nil,
         nowProvider: @escaping () -> Date = Date.init,
-        clock: any Clock = SystemClock(),
+        clock: (any Clock)? = nil,
         raceLogic: NextToGoRaceLogic? = nil
     ) {
-        self.client = client
+        self.client = client ?? NextRacesClient()
         self.nowProvider = nowProvider
-        self.clock = clock
+        self.clock = clock ?? SystemClock()
         self.raceLogic = raceLogic ?? NextToGoRaceLogic(
             expiryThreshold: expiryThreshold,
             desiredRaceCountPerCategory: desiredRaceCountPerCategory

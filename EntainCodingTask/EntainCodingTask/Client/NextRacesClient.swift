@@ -23,6 +23,8 @@ enum NextRacesClientError: Error, Equatable, Sendable {
     case decodingFailed
 }
 
+/// Client fetches and decodes Races.
+/// If there was more than 1 usage, we should look at extracting out a network layer so that supports different requests
 struct NextRacesClient: NextRacesClientProtocol {
     private let session: any URLSessionProtocol
     private let decoder: JSONDecoder
