@@ -9,12 +9,17 @@ import Foundation
 import Observation
 import SwiftUI
 
+enum NextToGoScreenState: Sendable {
+    case loading
+    case content
+    case error
+}
+
 struct NextToGoViewState {
-    var isInitialLoading = false
+    var screenState: NextToGoScreenState = .loading
     var isFetchingMore = false
     var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
     var rows: [RaceRow] = []
-    var hasAPIError = false
 }
 
 @MainActor
@@ -63,8 +68,7 @@ final class NextToGoViewModel {
     /// Performs the initial fetch, publishes the first visible rows,
     /// then continues topping up in the background if needed.
     func loadRaces() async {
-        viewState.isInitialLoading = true
-        viewState.hasAPIError = false
+        viewState.screenState = .loading
 
         do {
             currentRequestedCount = fetchStep
@@ -73,13 +77,12 @@ final class NextToGoViewModel {
             startCountdownLoopIfNeeded()
             updateRows()
             visibleCountsByCategory = currentVisibleCountsByCategory()
-            viewState.isInitialLoading = false
+            viewState.screenState = .content
 
             await fetchUntilSufficient()
         } catch {
-            viewState.isInitialLoading = false
             viewState.rows = []
-            viewState.hasAPIError = true
+            viewState.screenState = .error
         }
     }
 
@@ -208,9 +211,11 @@ final class NextToGoViewModel {
                 startCountdownLoopIfNeeded()
                 updateRows()
                 visibleCountsByCategory = currentVisibleCountsByCategory()
-                viewState.hasAPIError = false
+                viewState.screenState = .content
             } catch {
-                viewState.hasAPIError = true
+                if viewState.rows.isEmpty {
+                    viewState.screenState = .error
+                }
                 break
             }
         }

@@ -72,7 +72,6 @@ struct NextRacesClient: NextRacesClientProtocol {
         do {
             let response = try decoder.decode(NextRacesResponse.self, from: data)
             let races = mapper.map(response)
-            print(races)
             return races
         } catch {
             throw NextRacesClientError.decodingFailed

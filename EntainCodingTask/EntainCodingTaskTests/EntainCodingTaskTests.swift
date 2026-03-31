@@ -44,6 +44,8 @@ struct EntainCodingTaskTests {
         await viewModel.loadRaces()
         let initialCountdown = await MainActor.run { viewModel.viewState.rows.first?.countdown }
         #expect(initialCountdown == "0s")
+        let screenState = await MainActor.run { viewModel.viewState.screenState }
+        #expect(screenState == .content)
 
         clock.now = Date(timeIntervalSince1970: 1_033)
         await MainActor.run {
@@ -99,9 +101,11 @@ struct EntainCodingTaskTests {
         await viewModel.loadRaces()
 
         let rows = await MainActor.run { viewModel.viewState.rows }
+        let screenState = await MainActor.run { viewModel.viewState.screenState }
         #expect(client.requestedCounts == [30, 60])
         #expect(rows.count == 5)
         #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
+        #expect(screenState == .content)
     }
 
     @Test func nextToGoViewModelStopsFetchingAtOneHundredTwentyAndDeduplicatesRaceIDs() async {
@@ -141,9 +145,11 @@ struct EntainCodingTaskTests {
         await viewModel.loadRaces()
 
         let rows = await MainActor.run { viewModel.viewState.rows }
+        let screenState = await MainActor.run { viewModel.viewState.screenState }
         #expect(client.requestedCounts == [30, 60, 90, 120])
         #expect(rows.count == 4)
         #expect(Set(rows.map(\.id)).count == 4)
+        #expect(screenState == .content)
     }
 
 
@@ -240,8 +246,10 @@ struct EntainCodingTaskTests {
         await viewModel.loadRaces()
 
         let rows = await MainActor.run { viewModel.viewState.rows }
+        let screenState = await MainActor.run { viewModel.viewState.screenState }
         #expect(rows.count == 5)
         #expect(rows.map(\.id) == ["1", "2", "3", "4", "5"])
+        #expect(screenState == .content)
     }
 
 }

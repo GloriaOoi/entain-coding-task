@@ -18,7 +18,6 @@ The app is structured into four main layers:
 3. Business Logic (pure derivation rules)
 4. Data Layer (API client + decoding)
 
-
 ## 4. Key Implementation Decisions
 ### Fetch Strategy
 The app uses a progressive fetch strategy to maintain a sufficient pool of races:
