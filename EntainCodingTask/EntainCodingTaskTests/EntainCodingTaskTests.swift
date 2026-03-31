@@ -49,7 +49,7 @@ struct EntainCodingTaskTests {
 
         clock.now = Date(timeIntervalSince1970: 1_033)
         await MainActor.run {
-            viewModel.updateRows()
+            viewModel.rebuildVisibleRows()
         }
 
         let updatedCountdown = await MainActor.run { viewModel.viewState.rows.first?.countdown }
@@ -154,21 +154,21 @@ struct EntainCodingTaskTests {
 
     @Test func nextToGoViewModelStopsFetchingWhenAPIReturnsTheSameCountTwice() async {
         let now = Date(timeIntervalSince1970: 1_000)
-        let horseRaces = (1...10).map {
+        let horseRaces = (1...5).map {
             Race(id: "h\($0)", meetingName: "H\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0)), category: .horse)
         }
-        let greyhoundRaces = (1...10).map {
+        let greyhoundRaces = (1...5).map {
             Race(id: "g\($0)", meetingName: "G\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0 + 20)), category: .greyhound)
         }
-        let harnessRaces = (1...10).map {
+        let harnessRaces = (1...5).map {
             Race(id: "n\($0)", meetingName: "N\($0)", raceNumber: $0, advertisedStart: now.addingTimeInterval(Double($0 + 40)), category: .harness)
         }
-        let repeatedThirtyRaces = horseRaces + greyhoundRaces + harnessRaces
+        let repeatedFifteenRaces = horseRaces + greyhoundRaces + harnessRaces
 
         let client = MockNextRacesClient(
             responsesByCount: [
-                30: repeatedThirtyRaces,
-                60: repeatedThirtyRaces
+                30: repeatedFifteenRaces,
+                60: repeatedFifteenRaces
             ]
         )
 
