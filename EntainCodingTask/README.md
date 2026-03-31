@@ -91,4 +91,4 @@ Logging is not currently implemented. A Logger should be introduced to support s
 
 ### Future enhancements
 To request additional API documentation (e.g. Swagger) to better understand available parameters.
-To confirm whether category-based filtering is supported by the API.
+To confirm whether category-based filtering or pagination is supported by the API.
