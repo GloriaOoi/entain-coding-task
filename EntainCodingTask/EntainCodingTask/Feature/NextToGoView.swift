@@ -17,9 +17,13 @@ struct NextToGoView: View {
                 categoryFilters
 
                 if viewModel.viewState.hasAPIError {
-                    Text(Strings.apiErrorMessage)
-                    .font(.body)
-                    .foregroundStyle(Color.Entain.primaryText)
+                    VStack {
+                        Spacer()
+                        Text(Strings.apiErrorMessage)
+                        .font(.body)
+                        .foregroundStyle(Color.Entain.primaryText)
+                        Spacer()
+                    }
                 }
                 
                 if viewModel.viewState.isInitialLoading {

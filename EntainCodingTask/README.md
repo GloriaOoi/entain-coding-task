@@ -5,9 +5,9 @@ Coding task for Entain Interview
 This project implements a “Next to Go” race list using the Neds API. It displays the next 5 races with live countdowns, supports category filtering, and ensures the list remains populated as races expire over time.
 
 ## 2. Setup
-1. Clone the repository  
-2. Open the project in Xcode  
-3. Run on iOS simulator or device  
+1. Clone the repository
+2. Open the project in Xcode
+3. Run on iOS simulator or device
 
 No additional setup is required.
 
@@ -23,10 +23,10 @@ The app is structured into four main layers:
 ### Fetch Strategy
 The app uses a progressive fetch strategy to maintain a sufficient pool of races:
 
-- Initial fetch: 30 races count  
-- If visible races for any single category is less than 6 → increase fetch count (60 → 90 → 120)  
-- Maximum cap: 120 races  
-- If still insufficient, display available races without fulfilling 5 for all categories
+- Initial fetch: 30 races count.
+- If visible races for any single category is less than 6 → increase fetch count (60 → 90 → 120).
+- Maximum cap: 120 races.
+- If still insufficient, display available races without fulfilling 5 for all categories.
 
 The UI always displays a maximum of 5 races for any combination of filter.
 
@@ -55,7 +55,7 @@ Progressive fetching was chosen as it balances responsiveness, correctness, and 
 
 
 ### Replenishment Strategy
-The system monitors the visible race list and triggers additional fetches when the number of visible races drops below 6.
+The system monitors the visible race list and triggers additional fetches when the number of visible races for any category drops below 6.
 This provides a buffer to avoid the UI dropping below the required 5 races.
 
 Periodic refresh was considered but omitted to keep the implementation simple and aligned with the task requirements.
@@ -68,21 +68,24 @@ Countdown and expiry are calculated locally using the device’s current time.
 Races are deduplicated using `race_id` when merging results from multiple fetches. If the same race appears in subsequent responses, the data from the latest fetch will be maintained.
 
 ### Caching
-No caching between sessions is implemented. Each app launch fetches fresh data
-
+No caching between sessions is implemented. Each app launch fetches fresh data.
 
 ### Accessibility
-1. VoiceOver and Dynamic Type are supported  
-2. The production app does not currently support dark mode, so dark mode is intentionally excluded to focus on core functionality  
+1. VoiceOver and Dynamic Type are supported.
+2. The production app does not currently support dark mode, so dark mode is intentionally excluded to focus on core functionality.
 
 ### Linting
 SwiftLint is not include, but would definitely be required in production code to ensure consistency across development work.
 
 ### Localisation
-SwiftGen is not included, but would definitely be required in production code to ensure consistency across development work. Currently all hardcoded strings are localised in Strings.swift
+SwiftGen is not included, but would definitely be required in production code to ensure consistency across development work. Currently all hardcoded strings are localised in Strings.swift.
 
-### Limitations
-1. Due to uneven distribution of race categories, it is possible that fewer than 5 races are available for a selected filter, even after reaching the maximum fetch cap. 
-2. Countdown and expiry are calculated using the device’s local time. Minor discrepancies may occur due to network latency or differences between device and server time. 
-3. No persistent caching is implemented. Data is fetched fresh on each app launch. 
-4. No periodic background refresh is implemented. The system only fetches more data when the visible race list drops below the defined threshold.
+### Error Handling
+If an error occurs, a simple message is shown prompting the user to try again later. Retry logic is not implemented at this stage.
+
+### Logging
+Logging is not currently implemented. A Logger should be introduced to support structured logging across different levels (e.g. debug, info, error). Debug-level logs should be excluded from release builds to prevent exposing internal implementation details and reduce unnecessary overhead.
+
+### Future enhancements
+To request additional API documentation (e.g. Swagger) to better understand available parameters.
+To confirm whether category-based filtering is supported by the API.
