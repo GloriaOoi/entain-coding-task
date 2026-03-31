@@ -7,10 +7,10 @@
 
 import Foundation
 
-struct NextRacesResponse: Decodable {
+struct NextRacesResponse: Decodable, Sendable {
     let data: DataContainer
 
-    struct DataContainer: Decodable {
+    struct DataContainer: Decodable, Sendable {
         let nextToGoIDs: [String]
         let raceSummaries: [String: RaceSummary]
 
@@ -20,7 +20,7 @@ struct NextRacesResponse: Decodable {
         }
     }
 
-    struct RaceSummary: Decodable {
+    struct RaceSummary: Decodable, Sendable {
         let raceID: String
         let raceNumber: Int
         let meetingName: String
@@ -36,7 +36,7 @@ struct NextRacesResponse: Decodable {
         }
     }
 
-    struct AdvertisedStart: Decodable {
+    struct AdvertisedStart: Decodable, Sendable {
         let seconds: TimeInterval
     }
 }

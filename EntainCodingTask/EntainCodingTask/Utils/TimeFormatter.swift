@@ -47,13 +47,7 @@ struct TimeFormatter {
         let timeText = fullTimeText(minutes: minutes, seconds: seconds)
 
         if totalSeconds < 0 {
-            return String.localizedStringWithFormat(
-                NSLocalizedString(
-                    "countdown_accessibility_started_ago_format",
-                    comment: "Accessibility text for a race that has already started. Parameter: elapsed time"
-                ),
-                timeText
-            )
+            return Strings.countdownAccessibilityStartedAgo(timeText)
         }
 
         return timeText
@@ -61,39 +55,25 @@ struct TimeFormatter {
 
     private static func fullTimeText(minutes: Int, seconds: Int) -> String {
         if minutes > 0 {
-            return String.localizedStringWithFormat(
-                NSLocalizedString(
-                    "countdown_accessibility_minutes_seconds_format",
-                    comment: "Accessibility text for minutes and seconds. Parameters: minutes, minute unit, seconds, second unit"
-                ),
-                String(minutes),
-                minuteUnit(for: minutes),
-                String(seconds),
-                secondUnit(for: seconds)
+            return Strings.countdownAccessibilityMinutesSeconds(
+                minutes: minutes,
+                minuteUnit: minuteUnit(for: minutes),
+                seconds: seconds,
+                secondUnit: secondUnit(for: seconds)
             )
         }
 
-        return String.localizedStringWithFormat(
-            NSLocalizedString(
-                "countdown_accessibility_seconds_only_format",
-                comment: "Accessibility text for seconds only. Parameters: seconds, second unit"
-            ),
-            String(seconds),
-            secondUnit(for: seconds)
+        return Strings.countdownAccessibilitySecondsOnly(
+            seconds: seconds,
+            secondUnit: secondUnit(for: seconds)
         )
     }
 
     private static func minuteUnit(for value: Int) -> String {
-        NSLocalizedString(
-            value == 1 ? "countdown_accessibility_minute_singular" : "countdown_accessibility_minute_plural",
-            comment: "Localized minute unit"
-        )
+        value == 1 ? Strings.countdownAccessibilityMinuteSingular : Strings.countdownAccessibilityMinutePlural
     }
 
     private static func secondUnit(for value: Int) -> String {
-        NSLocalizedString(
-            value == 1 ? "countdown_accessibility_second_singular" : "countdown_accessibility_second_plural",
-            comment: "Localized second unit"
-        )
+        value == 1 ? Strings.countdownAccessibilitySecondSingular : Strings.countdownAccessibilitySecondPlural
     }
 }

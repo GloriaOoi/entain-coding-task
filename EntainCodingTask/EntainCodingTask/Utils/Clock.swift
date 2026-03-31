@@ -7,7 +7,7 @@
 
 import Foundation
 
-protocol Clock {
+protocol Clock: Sendable {
     func sleep(for duration: Duration) async throws
 }
 

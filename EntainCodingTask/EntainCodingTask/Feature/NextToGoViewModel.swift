@@ -6,17 +6,22 @@
 //
 
 import Foundation
-import Combine
+import Observation
 import SwiftUI
 
+struct NextToGoViewState {
+    var isInitialLoading = false
+    var isFetchingMore = false
+    var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
+    var rows: [RaceRow] = []
+    var hasAPIError = false
+}
+
 @MainActor
-final class NextToGoViewModel: ObservableObject {
-    // TODO: Could create 1 published object ViewState, instead of separate items
-    @Published private(set) var isInitialLoading = false
-    @Published private(set) var isFetchingMore = false
-    @Published var selectedCategories: Set<RaceCategory> = [.horse, .greyhound, .harness]
-    @Published private(set) var rows: [RaceRow] = []
-    
+@Observable
+final class NextToGoViewModel {
+    private(set) var viewState = NextToGoViewState()
+
     private let client: any NextRacesClientProtocol
     private let nowProvider: () -> Date
     private let clock: Clock
@@ -34,14 +39,14 @@ final class NextToGoViewModel: ObservableObject {
     private let maxFetchCount = 120
     
     init(
-        client: any NextRacesClientProtocol = NextRacesClient(),
+        client: (any NextRacesClientProtocol)? = nil,
         nowProvider: @escaping () -> Date = Date.init,
-        clock: any Clock = SystemClock(),
+        clock: (any Clock)? = nil,
         raceLogic: NextToGoRaceLogic? = nil
     ) {
-        self.client = client
+        self.client = client ?? NextRacesClient()
         self.nowProvider = nowProvider
-        self.clock = clock
+        self.clock = clock ?? SystemClock()
         self.raceLogic = raceLogic ?? NextToGoRaceLogic(
             expiryThreshold: expiryThreshold,
             desiredRaceCountPerCategory: desiredRaceCountPerCategory
@@ -55,15 +60,11 @@ final class NextToGoViewModel: ObservableObject {
         fetchTask = nil
     }
     
-    deinit {
-        countdownTask?.cancel()
-        fetchTask?.cancel()
-    }
-    
     /// Performs the initial fetch, publishes the first visible rows,
     /// then continues topping up in the background if needed.
     func loadRaces() async {
-        isInitialLoading = true
+        viewState.isInitialLoading = true
+        viewState.hasAPIError = false
 
         do {
             currentRequestedCount = fetchStep
@@ -72,12 +73,13 @@ final class NextToGoViewModel: ObservableObject {
             startCountdownLoopIfNeeded()
             updateRows()
             visibleCountsByCategory = currentVisibleCountsByCategory()
-            isInitialLoading = false
+            viewState.isInitialLoading = false
 
             await fetchUntilSufficient()
         } catch {
-            isInitialLoading = false
-            rows = []
+            viewState.isInitialLoading = false
+            viewState.rows = []
+            viewState.hasAPIError = true
         }
     }
 
@@ -109,10 +111,10 @@ final class NextToGoViewModel: ObservableObject {
     
     /// Rebuilds the UI rows from the current pool and caps the list at five items.
     func updateRows() {
-        rows = Array(
+        viewState.rows = Array(
             raceLogic.makeRows(
                 from: racePool,
-                selectedCategories: selectedCategories,
+                selectedCategories: viewState.selectedCategories,
                 now: nowProvider()
             )
             .prefix(visibleRowLimit)
@@ -121,7 +123,7 @@ final class NextToGoViewModel: ObservableObject {
 
     /// Show a spinner if list count is less than 5 and is still fetching
     var shouldShowBackgroundSpinner: Bool {
-        isFetchingMore && rows.count < visibleRowLimit
+        viewState.isFetchingMore && viewState.rows.count < visibleRowLimit
     }
     
     /// Keeps countdown text fresh and lets the view model decide
@@ -147,12 +149,17 @@ final class NextToGoViewModel: ObservableObject {
     }
     
     func toggleCategory(_ category: RaceCategory) {
-        if selectedCategories.contains(category) {
-            selectedCategories.remove(category)
+        if viewState.selectedCategories.contains(category) {
+            viewState.selectedCategories.remove(category)
         } else {
-            selectedCategories.insert(category)
+            viewState.selectedCategories.insert(category)
         }
         
+        refreshRows(triggerFetchIfNeeded: false)
+    }
+
+    func setSelectedCategories(_ categories: Set<RaceCategory>) {
+        viewState.selectedCategories = categories
         refreshRows(triggerFetchIfNeeded: false)
     }
     
@@ -172,15 +179,15 @@ final class NextToGoViewModel: ObservableObject {
         }
 
         guard !isCurrentlySufficient() && currentRequestedCount <= maxFetchCount else {
-            isFetchingMore = false
+            viewState.isFetchingMore = false
             currentRequestedCount = 0
             return
         }
 
-        isFetchingMore = true
+        viewState.isFetchingMore = true
 
         defer {
-            isFetchingMore = false
+            viewState.isFetchingMore = false
             fetchTask = nil
             currentRequestedCount = 0
         }
@@ -201,7 +208,9 @@ final class NextToGoViewModel: ObservableObject {
                 startCountdownLoopIfNeeded()
                 updateRows()
                 visibleCountsByCategory = currentVisibleCountsByCategory()
+                viewState.hasAPIError = false
             } catch {
+                viewState.hasAPIError = true
                 break
             }
         }

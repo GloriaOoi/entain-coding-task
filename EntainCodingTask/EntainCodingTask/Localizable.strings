@@ -12,3 +12,4 @@
 "countdown_accessibility_minute_plural" = "minutes";
 "countdown_accessibility_second_singular" = "second";
 "countdown_accessibility_second_plural" = "seconds";
+"api_error_message" = "API error occurred. Try again later.";
